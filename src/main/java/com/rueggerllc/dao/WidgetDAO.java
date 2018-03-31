@@ -1,4 +1,4 @@
-package com.rueggerllc.tests;
+package com.rueggerllc.dao;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -9,57 +9,75 @@ import java.util.Calendar;
 import java.util.Properties;
 
 import org.apache.log4j.Logger;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
 
-import com.rueggerllc.dao.WidgetDAO;
+public class WidgetDAO {
+	
+	private static final Logger logger = Logger.getLogger(WidgetDAO.class);
+	
+	
+	public void selectWidgets() {
+		Connection connection = null;
+		Statement statement = null;
+		ResultSet resultSet = null;
+		try {
+			Properties properties = new Properties();
+			properties.setProperty("user", "hadoop");
+			properties.setProperty("password", "dakota");
+			Class.forName("com.mysql.jdbc.Driver");
+			connection = DriverManager.getConnection("jdbc:mysql://captain:3306/hadoopdb", properties);
+			statement = connection.createStatement();
+			resultSet = statement.executeQuery("select * from widgets");
+			while (resultSet.next()) {
+				String widgetName = resultSet.getString("widget_name");
+				logger.info("Widget Name=" + widgetName);
+			}
+		} catch (Exception e) {
+			logger.error("ERROR", e);
+		} finally {
+			close(resultSet);
+			close(statement);
+			close(connection);
+		}
+	}
+	
+	public int getMaxWidgetID() {
+		Connection connection = null;
+		Statement statement = null;
+		ResultSet resultSet = null;
+		int max = 0;
+		try {
+			Properties properties = new Properties();
+			properties.setProperty("user", "hadoop");
+			properties.setProperty("password", "dakota");
+			Class.forName("com.mysql.jdbc.Driver");
+			connection = DriverManager.getConnection("jdbc:mysql://captain:3306/hadoopdb", properties);
+			statement = connection.createStatement();
+			resultSet = statement.executeQuery("select max(id) from widgets");
+			while (resultSet.next()) {
+				max = resultSet.getInt(1);
+				logger.info("MAX=" + max);
+			}
+		} catch (Exception e) {
+			logger.error("ERROR", e);
+		} finally {
+			close(resultSet);
+			close(statement);
+			close(connection);
+		}
+		return max;
+	}
+	
+	
+	
+	
+	public void insertAdditionalWidgets(int numberOfWidgetsToInsert) {
+		int maxWidgetID = getMaxWidgetID();
+		insertWidgets(numberOfWidgetsToInsert, maxWidgetID+1);
+	}
+	
+	public void insertWidgets(int numberOfWidgetsToInsert, int startID) {
 
-public class JDBCTests {
-
-	private static Logger logger = Logger.getLogger(JDBCTests.class);
-	
-	
-	
-	@BeforeClass
-	public static void setupClass() throws Exception {
-	}
-	
-	@AfterClass
-	public static void tearDownClass() throws Exception {
-	}
-
-	@Before
-	public void setupTest() throws Exception {
-	}
-
-	@After
-	public void tearDownTest() throws Exception {
-	}
-	
-	@Test
-	// @Ignore
-	public void testGetMaxWidgetID() {
-		WidgetDAO dao = new WidgetDAO();
-		int max = dao.getMaxWidgetID();
-		logger.info("MaxID=" + max);
-	}
-	
-	
-	@Test 
-	@Ignore
-	public void testSelectWidgets() {
-		WidgetDAO dao = new WidgetDAO();
-		dao.selectWidgets();
-	}
-	
-	@Test
-	@Ignore
-	public void testInsertWidgets() {
-		
+		logger.info("Insert Widgets Starting with startID=" + startID);
 		Connection connection = null;
 		PreparedStatement preparedStatement = null;
 		try {
@@ -75,10 +93,8 @@ public class JDBCTests {
 			    "values " +
 			    "(null, ?, ?, ?, ?, ?)";
 			preparedStatement = connection.prepareStatement(insertStatement);
-			insertWidgets(preparedStatement);
-			
-			for (int i = 0; i < 1000; i++) {
-				insertWidget(i, preparedStatement);
+			for (int i = 0; i < numberOfWidgetsToInsert; i++) {
+				insertWidget(startID + i, preparedStatement);
 			}
 
 		} catch (Exception e) {
@@ -86,12 +102,10 @@ public class JDBCTests {
 		} finally {
 			close(preparedStatement);
 			close(connection);
-		}
-
+		}		
 	}
 	
-	
-	private void insertWidgets(PreparedStatement preparedStatement) throws Exception {
+	private void insertTop3Widgets(PreparedStatement preparedStatement) throws Exception {
 		preparedStatement.setString(1,"sprocket");
 		preparedStatement.setDouble(2, new Double(0.25));
 		preparedStatement.setDate(3, getNow());
@@ -124,43 +138,10 @@ public class JDBCTests {
 		preparedStatement.executeUpdate();
 	}
 	
-	
-	
 	private static java.sql.Date getNow() {
 		long now = Calendar.getInstance().getTime().getTime();
-		// long uDate = new java.util.Date().getTime();
 		java.sql.Date date = new java.sql.Date(now);
 		return date;
-	}
-	
-	
-	@Test
-	@Ignore
-	public void testGetWidgets() {
-		
-		Connection connection = null;
-		Statement statement = null;
-		ResultSet resultSet = null;
-		try {
-			Properties properties = new Properties();
-			properties.setProperty("user", "hadoop");
-			properties.setProperty("password", "dakota");
-			Class.forName("com.mysql.jdbc.Driver");
-			connection = DriverManager.getConnection("jdbc:mysql://captain:3306/hadoopdb", properties);
-			statement = connection.createStatement();
-			resultSet = statement.executeQuery("select * from widgets");
-			while (resultSet.next()) {
-				String widgetName = resultSet.getString("widget_name");
-				logger.info("Widget Name=" + widgetName);
-			}
-		} catch (Exception e) {
-			logger.error("ERROR", e);
-		} finally {
-			close(resultSet);
-			close(statement);
-			close(connection);
-		}
-
 	}
 	
 	private void close(Connection connection) {
@@ -187,8 +168,5 @@ public class JDBCTests {
 		} catch (Exception e) {
 		}
 	}
-	
 
-	
-	
 }
